@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0 auto;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    #data {
+      margin-top: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    #feedback {
+      color: green;
+      margin: 10px 0;
+    }
+    input[type=number] {
+      width: 100%;
+      padding: 12px 20px;
+      margin: 8px 0;
+      box-sizing: border-box;
+      border: 2px solid #ccc;
+      border-radius: 4px;
+    }
+    input[type=text] {
+      width: 100%;
+      padding: 12px 20px;
+      margin: 8px 0;
+      box-sizing: border-box;
+      border: 2px solid #ccc;
+      border-radius: 4px;
+    }
+    input[type=submit] {
+      width: 100%;
+      background-color: #4CAF50;
+      color: white;
+      padding: 14px 20px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    input[type=submit]:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>Balance: <span id="balance"></span></h1>
+  <form id="myForm">
+    <input type="number" min="0" step="0.01" id="topupInput" placeholder="Amount topup" oninput="handleTopupInput()">
+    <input type="number" min="0" step="0.01" id="spentInput" placeholder="Spent amount" oninput="handleSpentInput()">
+    <input type="text" id="descInput" placeholder="Description of spent">
+    <input type="submit" value="Submit">
+  </form>
+  <div id="feedback"></div>
+  <div id="data"></div>
+  <script>
+    var topupInput = document.getElementById('topupInput');
+    var spentInput = document.getElementById('spentInput');
+    var descInput = document.getElementById('descInput');
+    var feedback = document.getElementById('feedback');
+
+    document.getElementById('myForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (topupInput.value && spentInput.value) {
+        feedback.innerText = 'Only one of "Topup" and "Spent" can be filled.';
+        return;
+      }
+      if (!topupInput.value && !spentInput.value) {
+        feedback.innerText = 'Either "Topup" or "Spent" must be filled.';
+        return;
+      }
+      if (spentInput.value && !descInput.value) {
+        feedback.innerText = 'Please fill "Description of spent".';
+        return;
+      }
+      if (confirm('Are you sure you want to submit?')) {
+        var topup = parseFloat(topupInput.value) || 0;
+        var spent = parseFloat(spentInput.value) || 0;
+        var description = descInput.value;
+        fetch('https://script.google.com/macros/s/AKfycbwzUZCXp2KLqIXL_Z2wWoSrzlvOArkV1f6uuWf1xAye4RLQbZZZD_8Abn9SFJHdQVbd/exec', {
+          method: 'POST',
+          mode: 'no-cors',
+          cache: 'no-cache',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ topup: topup, spent: spent, description: description })
+        }).then(() => {
+          feedback.innerText = 'Submitted successfully!';
+          setTimeout(() => { feedback.innerText = ''; }, 3000); // Remove feedback after 3 seconds
+        });
+        topupInput.value = '';
+        spentInput.value = '';
+        descInput.value = '';
+        setTimeout(loadData, 1000); // Refresh data after 1 second
+      }
+    });
+
+    function handleTopupInput() {
+      if (topupInput.value) {
+        spentInput.disabled = true;
+        descInput.disabled = true;
+        descInput.value = 'Topup';
+      } else {
+        spentInput.disabled = false;
+        descInput.disabled = false;
+        descInput.value = '';
+      }
+    }
+
+    function handleSpentInput() {
+      if (spentInput.value) {
+        topupInput.disabled = true;
+      } else {
+        topupInput.disabled = false;
+      }
+    }
+
+    function loadData() {
+  fetch('https://script.google.com/macros/s/AKfycbwzUZCXp2KLqIXL_Z2wWoSrzlvOArkV1f6uuWf1xAye4RLQbZZZD_8Abn9SFJHdQVbd/exec')
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById('balance').innerText = data.data[data.data.length - 1][5]; // balance is the 6th column of the last row
+      var html = '<table><tr><th>Topup</th><th>Spent</th><th>Timestamp</th><th>Description</th><th>Balance</th></tr>';
+      for (var i = 0; i < data.data.length; i++) {
+        html += '<tr><td>' + data.data[i][1] + '</td><td>' + data.data[i][2] + '</td><td>' + new Date(data.data[i][3]).toLocaleString() + '</td><td>' + data.data[i][4] + '</td><td>' + data.data[i][5] + '</td></tr>';
+      }
+      html += '</table>';
+      document.getElementById('data').innerHTML = html;
+    });
+}
+
+
+
+    loadData(); // Load data when page is loaded
+  </script>
+</body>
+</html>
